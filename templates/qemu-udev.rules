@@ -1,0 +1,6 @@
+SUBSYSTEM=="vfio", OWNER="root", GROUP="kvm"
+{% if usb_passthrus is defined %}
+{% for usb_passthru in usb_passthrus %}
+SUBSYSTEM=="usb", ATTR{idVendor}=="{{ usb_passthru.vendor }}", ATTR{idProduct}=="{{ usb_passthru.product }}" OWNER="root", GROUP="kvm"
+{% endfor %}
+{% endif %}

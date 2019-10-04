@@ -1,0 +1,68 @@
+---
+- name: Setup virtio-win repo
+  copy:
+    src: virtio-win.repo
+    dest: /etc/yum.repos.d/virtio-win.repo
+- include_tasks: fedora-preview-repo.yml
+  when:
+    - virt_preview is defined
+    - virt_preview
+    - ansible_distribution == "Fedora"
+- name: Install python libsemanage
+  package:
+    name: libsemanage-python
+- name: Install Virtualization pacakge
+  package:
+    name: "@Virtualization" # TODO --with-optional
+- name: Install virt-manager
+  package:
+    name: virt-manager
+- name: Install qemu
+  package:
+    name: qemu,qemu-system-x86
+- name: Install tigervnc
+  package:
+    name: tigervnc
+- name: Install virtio win
+  package:
+    name: virtio-win
+- name: Install guestfs tools
+  package:
+    name: libguestfs-tools
+- name: Allow virt to use nfs
+  seboolean:
+    name: virt_use_nfs
+    state: yes
+    persistent: yes
+- name: Start and enable libvirtd
+  service:
+    name: libvirtd
+    enabled: yes
+    state: started
+- name: Setup libvirt polkit rules
+  copy:
+    src: 80-libvirt.rules
+    dest: /etc/polkit-1/rules.d/80-libvirt.rules
+- name: Setup qemu udev rules
+  template:
+    src: qemu-udev.rules
+    dest: /etc/udev/rules.d/10-qemu-hw-users.rules
+- name: Setup qemu limits
+  copy:
+    src: 10-limits-qemu.conf
+    dest: /etc/security/limits.d/10-limits-qemu.conf
+- name: Allow additional bridges
+  template:
+    src: bridge.conf
+    dest: /etc/qemu/bridge.conf
+- name: Ensure qemu runs as root (allows access to gpu)
+  lineinfile:
+    path: /etc/libvirt/qemu.conf
+    regexp: '^#?user = "root"'
+    line: 'user = "root"'
+- name: Add user to libvirt group
+  user:
+    append: yes
+    name: "{{ local_user }}"
+    groups: libvirt
+  when: local_user is defined
