@@ -66,3 +66,18 @@
     name: "{{ local_user }}"
     groups: libvirt
   when: local_user is defined
+- name: check if Intel processor
+  command: >
+    grep -q Intel /proc/cpuinfo
+  ignore_errors: true
+  register: is_intel
+- name: Add intel_iommu=on to /etc/default/grub
+  lineinfile:
+    path: /etc/default/grub
+    backup: yes
+    regexp: '^GRUB_CMDLINE_LINUX="(.*?\s)?(?:intel_iommu=on )?\s??(.*?)?"$'
+    line: 'GRUB_CMDLINE_LINUX="\1intel_iommu=on \2"'
+    backrefs: yes
+  notify: [ 'Update Boot Image' ]
+  when: is_intel
+# TODO check virt-host-validate exits zero
