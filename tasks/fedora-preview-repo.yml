@@ -1,2 +1,0 @@
----
-- copy: src=fedora-virt-preview.repo dest=/etc/yum.repos.d/fedora-virt-preview.repo

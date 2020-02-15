@@ -1,45 +1,40 @@
 ---
+- include_vars: "{{ item }}"
+  with_first_found:
+    - "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+    - "../vars/{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml"
+    - "../vars/{{ ansible_distribution }}.yml"
+    - "../vars/{{ ansible_os_family }}.yml"
 - name: Setup virtio-win repo
   copy:
     src: virtio-win.repo
     dest: /etc/yum.repos.d/virtio-win.repo
-- include_tasks: fedora-preview-repo.yml
-  when:
-    - virt_preview is defined
-    - virt_preview
-    - ansible_distribution == "Fedora"
-- name: Install python libsemanage
+- name: Install some virt tools
   package:
-    name: libsemanage-python
-- name: Install Virtualization pacakge
-  package:
-    name: "@Virtualization" # TODO --with-optional
-- name: Install virt-manager
-  package:
-    name: virt-manager
-- name: Install qemu
-  package:
-    name: qemu,qemu-system-x86
-- name: Install tigervnc
-  package:
-    name: tigervnc
-- name: Install virtio win
-  package:
-    name: virtio-win
-- name: Install guestfs tools
-  package:
-    name: libguestfs-tools
+    name:
+    - "{{ virt_pkg }}"
+    - qemu-kvm
+    - libguestfs-tools
+    - libguestfs-xfs
+    - cloud-utils
+    - python-lxml
+    - virt-install
+    - "{{ python_libvirt_pkg }}"
+    - "{{ python_semanage_pkg }}"
+    - virtio-win
+    - tigervnc
+    - virt-manager
 - name: Allow virt to use nfs
   seboolean:
     name: virt_use_nfs
     state: yes
     persistent: yes
-- name: Start and enable libvirtd
+- name: Start libvirtd
   service:
     name: libvirtd
     enabled: yes
     state: started
-- name: Setup libvirt polkit rules
+- name: Allow wheel users to configure libvirt
   copy:
     src: 80-libvirt.rules
     dest: /etc/polkit-1/rules.d/80-libvirt.rules
@@ -47,19 +42,16 @@
   template:
     src: qemu-udev.rules
     dest: /etc/udev/rules.d/10-qemu-hw-users.rules
-- name: Setup qemu limits
+- name: Setup qemu memory limits
   copy:
     src: 10-limits-qemu.conf
     dest: /etc/security/limits.d/10-limits-qemu.conf
-- name: Allow additional bridges
-  template:
-    src: bridge.conf
-    dest: /etc/qemu/bridge.conf
-- name: Ensure qemu runs as root (allows access to gpu)
+- name: Run qemu as root
   lineinfile:
     path: /etc/libvirt/qemu.conf
     regexp: '^#?user = "root"'
     line: 'user = "root"'
+  when: virt_use_root
 - name: Add user to libvirt group
   user:
     append: yes
@@ -80,4 +72,22 @@
     backrefs: yes
   notify: [ 'Update Boot Image' ]
   when: is_intel
-# TODO check virt-host-validate exits zero
+- name: run virt-host-validate
+  command:
+    virt-host-validate
+  changed_when: false
+- include_tasks: net-storage.yml
+- name: Define libvirt net
+  virt_net:
+    state: present
+    name: "{{ item.name }}"
+    xml: "{{ item.xml }}"
+  with_items: "{{ virt_nets }}"
+  when: virt_nets is defined
+- name: Start libvirt net
+  virt_net:
+    state: active
+    name: "{{ item.name }}"
+    autostart: "{{ item.autostart }}"
+  with_items: "{{ virt_nets }}"
+  when: virt_nets is defined

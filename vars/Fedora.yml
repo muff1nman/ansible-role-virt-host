@@ -1,0 +1,3 @@
+python_libvirt_pkg: python3-libvirt
+python_semanage_pkg: python3-libsemanage
+virt_pkg: "@Virtualization"

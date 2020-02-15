@@ -1,0 +1,3 @@
+python_libvirt_pkg: libvirt-python
+python_semanage_pkg: libsemanage-python
+virt_pkg: "@^Virtualization Host"

@@ -1,0 +1,11 @@
+---
+- name: Install nfs-utils
+  package:
+    name: nfs-utils
+- name: Install iscsi utils
+  package:
+    name: iscsi-initiator-utils
+- name: Fix initiator name
+  copy: # TODO fix domain name
+    content: "InitiatorName=iqn.2018-10.linux-{{ ansible_domain }}:{{ inventory_hostname_short | lower }}"
+    dest: /etc/iscsi/initiatorname.iscsi
