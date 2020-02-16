@@ -71,11 +71,12 @@
     line: 'GRUB_CMDLINE_LINUX="\1intel_iommu=on \2"'
     backrefs: yes
   notify: [ 'Update Boot Image' ]
-  when: is_intel
+  when: is_intel.rc == 0
 - name: run virt-host-validate
   command:
     virt-host-validate
   changed_when: false
+  when: skip_virt_host_validate is undefined or not skip_virt_host_validate
 - include_tasks: net-storage.yml
 - name: Define libvirt net
   virt_net:
