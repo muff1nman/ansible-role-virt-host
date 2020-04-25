@@ -34,6 +34,42 @@
     name: libvirtd
     enabled: yes
     state: started
+
+- name: Load br_netfilter module
+  modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Load br_netfilter on boot
+  copy:
+    dest: /etc/modules-load.d/virt.conf
+    content: |-
+      ### This file is managed by Ansible
+      br-netfilter
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Enable net.ipv4.ip_forward in sysctl
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    sysctl_file: /etc/sysctl.d/ipv4-ip_forward.conf
+    state: present
+    reload: yes
+
+- name: Set bridge-nf-call-{arptables,iptables} to 0
+  sysctl:
+    name: "{{ item }}"
+    state: present
+    value: 0
+    sysctl_file: /etc/sysctl.d/bridge-nf-call.conf
+    reload: yes
+  with_items:
+    - net.bridge.bridge-nf-call-arptables
+    - net.bridge.bridge-nf-call-ip6tables
+    - net.bridge.bridge-nf-call-iptables
+
 - name: Allow wheel users to configure libvirt
   copy:
     src: 80-libvirt.rules
